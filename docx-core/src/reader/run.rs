@@ -22,9 +22,9 @@ impl ElementReader for Run {
     ) -> Result<Self, ReaderError> {
         let mut run = Run::new();
         let mut text_state = TextState::Text;
+        let mut text_added = false;
         loop {
             let e = r.next();
-            let mut _text_added = false;
             match e {
                 Ok(XmlEvent::StartElement {
                     attributes, name, ..
@@ -39,7 +39,10 @@ impl ElementReader for Run {
                         XMLElement::Underline => run = run.underline(&attributes[0].value.clone()),
                         XMLElement::Italic => run = run.italic(),
                         XMLElement::Vanish => run = run.vanish(),
-                        XMLElement::Text => text_state = TextState::Text,
+                        XMLElement::Text => {
+                            text_state = TextState::Text;
+                            text_added = false;
+                        }
                         XMLElement::DeleteText => text_state = TextState::Delete,
                         XMLElement::Break => {
                             run = run.add_break(BreakType::from_str(&attributes[0].value)?)
@@ -54,7 +57,8 @@ impl ElementReader for Run {
                             return Ok(run);
                         }
                         XMLElement::Text => {
-                            if _text_added {
+                            dbg!(&text_added);
+                            if text_added {
                                 return Ok(run);
                             }
                             return Ok(run.add_text(" "));
@@ -63,7 +67,7 @@ impl ElementReader for Run {
                     }
                 }
                 Ok(XmlEvent::Characters(c)) => {
-                    _text_added = true;
+                    text_added = true;
                     if text_state == TextState::Delete {
                         run = run.add_delete_text(c);
                     } else {
@@ -176,6 +180,33 @@ mod tests {
             run,
             Run {
                 children: vec![RunChild::Text(Text::new(" "))],
+                run_property: RunProperty {
+                    sz: None,
+                    sz_cs: None,
+                    color: None,
+                    highlight: None,
+                    underline: None,
+                    bold: None,
+                    bold_cs: None,
+                    italic: None,
+                    italic_cs: None,
+                    vanish: None,
+                },
+            }
+        );
+    }
+
+    #[test]
+    fn test_read_not_empty_t() {
+        let c = r#"<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:r><w:t xml:space="preserve">test</w:t></w:r>
+</w:document>"#;
+        let mut parser = EventReader::new(c.as_bytes());
+        let run = Run::read(&mut parser, &[]).unwrap();
+        assert_eq!(
+            run,
+            Run {
+                children: vec![RunChild::Text(Text::new("test"))],
                 run_property: RunProperty {
                     sz: None,
                     sz_cs: None,
