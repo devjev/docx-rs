@@ -12,11 +12,21 @@ export type NumberingPropertyJSON = {
   level: number;
 };
 
+export type IndentJSON = {
+  start: number;
+  end: number | null;
+  specialIndent: {
+    type: "firstLine" | "hanging";
+    val: number;
+  } | null;
+};
+
 export type ParagraphPropertyJSON = {
   runProperty: RunChildJSON;
   style: string | null;
   numberingProperty: NumberingPropertyJSON | null;
   alignment: "left" | "center" | "right" | "justified" | "both";
+  indent: IndentJSON;
 };
 
 export type ParagraphJSON = {
