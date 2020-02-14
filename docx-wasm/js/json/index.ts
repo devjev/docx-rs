@@ -1,4 +1,4 @@
-import { Styles } from "./styles";
+import { StylesJSON } from "./styles";
 import { DocumentJSON } from "./document";
 import { NumberingsJSON } from "./numbering";
 
@@ -28,7 +28,7 @@ export type DocxJSON = {
       };
     };
   };
-  styles: Styles;
+  styles: StylesJSON;
   document: DocumentJSON;
   comments: {
     comments: any[];
