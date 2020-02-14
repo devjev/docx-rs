@@ -50,7 +50,11 @@ impl ElementReader for Run {
                     if text_state == TextState::Delete {
                         run = run.add_delete_text(c);
                     } else {
-                        run = run.add_text(c);
+                        if c == "" {
+                            run = run.add_text(" ");
+                        } else {
+                            run = run.add_text(c);
+                        }
                     }
                 }
                 Ok(XmlEvent::EndElement { name, .. }) => {
@@ -102,8 +106,7 @@ mod tests {
 
     #[test]
     fn test_read_tab() {
-        let c =
-            r#"<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+        let c = r#"<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
   <w:r><w:tab /></w:r>
 </w:document>"#;
         let mut parser = EventReader::new(c.as_bytes());
@@ -130,8 +133,7 @@ mod tests {
 
     #[test]
     fn test_read_br() {
-        let c =
-            r#"<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+        let c = r#"<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
   <w:r><w:br w:type="page" /></w:r>
 </w:document>"#;
         let mut parser = EventReader::new(c.as_bytes());
