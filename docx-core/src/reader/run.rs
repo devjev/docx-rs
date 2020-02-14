@@ -13,6 +13,7 @@ use crate::types::BreakType;
 enum TextState {
     Text,
     Delete,
+    Idle,
 }
 
 impl ElementReader for Run {
@@ -21,8 +22,7 @@ impl ElementReader for Run {
         _attrs: &[OwnedAttribute],
     ) -> Result<Self, ReaderError> {
         let mut run = Run::new();
-        let mut text_state = TextState::Text;
-        let mut text_added = false;
+        let mut text_state = TextState::Idle;
         loop {
             let e = r.next();
             match e {
@@ -41,7 +41,6 @@ impl ElementReader for Run {
                         XMLElement::Vanish => run = run.vanish(),
                         XMLElement::Text => {
                             text_state = TextState::Text;
-                            text_added = false;
                         }
                         XMLElement::DeleteText => text_state = TextState::Delete,
                         XMLElement::Break => {
@@ -51,29 +50,28 @@ impl ElementReader for Run {
                     }
                 }
                 Ok(XmlEvent::EndElement { name, .. }) => {
+                    text_state = TextState::Idle;
                     let e = XMLElement::from_str(&name.local_name).unwrap();
                     match e {
                         XMLElement::Run => {
                             return Ok(run);
                         }
                         XMLElement::Text => {
-                            dbg!(&text_added);
-                            if text_added {
-                                return Ok(run);
-                            }
-                            return Ok(run.add_text(" "));
+                            return Ok(run);
                         }
                         _ => {}
                     }
                 }
-                Ok(XmlEvent::Characters(c)) => {
-                    text_added = true;
-                    if text_state == TextState::Delete {
-                        run = run.add_delete_text(c);
-                    } else {
-                        run = run.add_text(c);
-                    }
-                }
+                Ok(XmlEvent::Characters(c)) => match text_state {
+                    TextState::Delete => run = run.add_delete_text(c),
+                    TextState::Text => run = run.add_text(c),
+                    _ => {}
+                },
+                Ok(XmlEvent::Whitespace(c)) => match text_state {
+                    TextState::Delete => run = run.add_delete_text(c),
+                    TextState::Text => run = run.add_text(c),
+                    _ => {}
+                },
                 Err(_) => return Err(ReaderError::XMLReadError),
                 _ => {}
             }
@@ -153,33 +151,6 @@ mod tests {
             run,
             Run {
                 children: vec![RunChild::Break(Break::new(BreakType::Page))],
-                run_property: RunProperty {
-                    sz: None,
-                    sz_cs: None,
-                    color: None,
-                    highlight: None,
-                    underline: None,
-                    bold: None,
-                    bold_cs: None,
-                    italic: None,
-                    italic_cs: None,
-                    vanish: None,
-                },
-            }
-        );
-    }
-
-    #[test]
-    fn test_read_empty_t() {
-        let c = r#"<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:r><w:t xml:space="preserve"></w:t></w:r>
-</w:document>"#;
-        let mut parser = EventReader::new(c.as_bytes());
-        let run = Run::read(&mut parser, &[]).unwrap();
-        assert_eq!(
-            run,
-            Run {
-                children: vec![RunChild::Text(Text::new(" "))],
                 run_property: RunProperty {
                     sz: None,
                     sz_cs: None,
