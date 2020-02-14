@@ -1,6 +1,6 @@
 {
   "name": "docx-wasm",
-  "version": "0.0.28",
+  "version": "0.0.29",
   "main": "dist/node/index.js",
   "browser": "dist/web/index.js",
   "author": "bokuweb <bokuweb12@gmail.com>",
@@ -9,7 +9,7 @@
     "wasm-pack:dev": "wasm-pack build --out-dir js/pkg",
     "wasm-pack:web": "wasm-pack build --out-dir dist/web/pkg",
     "wasm-pack:node": "wasm-pack build --out-dir dist/node/pkg --target nodejs",
-    "wasm-pack": "run-p wasm-pack:*",
+    "wasm-pack": "run-s wasm-pack:*",
     "tsc:web": "tsc -p tsconfig.web.json",
     "tsc:node": "tsc -p tsconfig.node.json",
     "tsc": "run-p tsc:*",
@@ -32,7 +32,8 @@
     "webpack-dev-server": "^3.1.0"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "module": "dist/web/index.js",
   "types": "dist/web/index.d.ts",
