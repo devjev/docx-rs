@@ -24,6 +24,7 @@ impl ElementReader for Run {
         let mut text_state = TextState::Text;
         loop {
             let e = r.next();
+            let mut _text_added = false;
             match e {
                 Ok(XmlEvent::StartElement {
                     attributes, name, ..
@@ -46,21 +47,27 @@ impl ElementReader for Run {
                         _ => {}
                     }
                 }
+                Ok(XmlEvent::EndElement { name, .. }) => {
+                    let e = XMLElement::from_str(&name.local_name).unwrap();
+                    match e {
+                        XMLElement::Run => {
+                            return Ok(run);
+                        }
+                        XMLElement::Text => {
+                            if _text_added {
+                                return Ok(run);
+                            }
+                            return Ok(run.add_text(" "));
+                        }
+                        _ => {}
+                    }
+                }
                 Ok(XmlEvent::Characters(c)) => {
+                    _text_added = true;
                     if text_state == TextState::Delete {
                         run = run.add_delete_text(c);
                     } else {
-                        if c == "" {
-                            run = run.add_text(" ");
-                        } else {
-                            run = run.add_text(c);
-                        }
-                    }
-                }
-                Ok(XmlEvent::EndElement { name, .. }) => {
-                    let e = XMLElement::from_str(&name.local_name).unwrap();
-                    if let XMLElement::Run = e {
-                        return Ok(run);
+                        run = run.add_text(c);
                     }
                 }
                 Err(_) => return Err(ReaderError::XMLReadError),
@@ -142,6 +149,33 @@ mod tests {
             run,
             Run {
                 children: vec![RunChild::Break(Break::new(BreakType::Page))],
+                run_property: RunProperty {
+                    sz: None,
+                    sz_cs: None,
+                    color: None,
+                    highlight: None,
+                    underline: None,
+                    bold: None,
+                    bold_cs: None,
+                    italic: None,
+                    italic_cs: None,
+                    vanish: None,
+                },
+            }
+        );
+    }
+
+    #[test]
+    fn test_read_empty_t() {
+        let c = r#"<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:r><w:t xml:space="preserve"></w:t></w:r>
+</w:document>"#;
+        let mut parser = EventReader::new(c.as_bytes());
+        let run = Run::read(&mut parser, &[]).unwrap();
+        assert_eq!(
+            run,
+            Run {
+                children: vec![RunChild::Text(Text::new(" "))],
                 run_property: RunProperty {
                     sz: None,
                     sz_cs: None,
